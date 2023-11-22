@@ -25,7 +25,7 @@ class Game:
 
                 elif event.type == pygame.MOUSEBUTTONUP:
                     pos = pygame.mouse.get_pos()
-                    print(pos)
+                    self.level.player_group.shoot(pos)
 
             # update player
             self.level.player_group.update()

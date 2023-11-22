@@ -9,7 +9,7 @@ LEVEL = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 4, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -36,13 +36,15 @@ class Level:
                         tile = Tile(pos, TileType.BLOCK, TileMaterial.GENERIC)
                     elif tile_type == 2:
                         tile = Tile(pos, TileType.SLOPE0, TileMaterial.GENERIC)
-                    else:  # tile_type == 3
+                    elif tile_type == 3:
                         tile = Tile(pos, TileType.SLOPE1, TileMaterial.GENERIC)
+                    elif tile_type == 4:
+                        tile = Tile(pos, TileType.SLOPE2, TileMaterial.GENERIC)
                     self.collision_sprites.add(tile)
                     self.sprite_group.add(tile)
 
         # spawn player
-        player = Player((108, 150), self.collision_sprites)
+        player = Player((400, 150), self.collision_sprites)
         self.player_group.add(player)
 
     def draw_sprites(self):

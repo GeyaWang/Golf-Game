@@ -1,10 +1,11 @@
 import pygame
 import shapely
 from tile import Tile
-from settings import GRAVITY, FPS, PIXELS_PER_METER, PLAYER_RADIUS, HITBOX_TOLERANCE, TILE_WIDTH, DRAG_CONSTANT, PLAYER_MASS
+from settings import GRAVITY, FPS, PIXELS_PER_METER, PLAYER_RADIUS, HITBOX_TOLERANCE, TILE_WIDTH, DRAG_CONSTANT, PLAYER_MASS, SHOOT_STRENGTH_COEFFICIENT, DRAW_HITBOXES
 from hitbox import CircleHitbox
 from shapely.geometry import LineString
-from math import dist, floor
+from math import dist as get_dist, floor, sqrt
+from collections import namedtuple
 
 
 class PlayerSpriteGroup(pygame.sprite.Group):
@@ -14,6 +15,13 @@ class PlayerSpriteGroup(pygame.sprite.Group):
     def shoot(self, pos):
         for sprite in self.sprites():
             sprite.shoot(pos)
+
+    def draw(self, surface, bgsurf=None, special_flags=0):
+        if DRAW_HITBOXES:
+            for sprite in self.sprites():
+                sprite.hitbox.draw()
+        else:
+            super().draw(surface)
 
 
 class Player(pygame.sprite.Sprite):
@@ -30,9 +38,13 @@ class Player(pygame.sprite.Sprite):
         self.velocity = pygame.Vector2()
         self.rotation = 0
         self.angular_vel = 0
-        self.pos_center = pygame.Vector2(self.rect.center)
+        self.center = pygame.Vector2(self.rect.center)
         self.prev_pos_center = pygame.Vector2()
-        self.hitbox = CircleHitbox(PLAYER_RADIUS, self.pos_center)
+        self.hitbox = CircleHitbox(PLAYER_RADIUS, self.center)
+
+    def shoot(self, pos):
+        delta = pygame.Vector2(pos) - self.center
+        self.velocity = delta.normalize() * sqrt(delta.magnitude()) * SHOOT_STRENGTH_COEFFICIENT
 
     def _rotate_sprite(self, angle):
         """Replace self.image with rotated sprite at a certain angle"""
@@ -61,7 +73,7 @@ class Player(pygame.sprite.Sprite):
     def _set_angular_vel(self, i_par: pygame.Vector2):
         """Set angular velocity, ignore if the change in position is negligible"""
 
-        if dist(self.prev_pos_center, self.pos_center) < HITBOX_TOLERANCE:
+        if get_dist(self.prev_pos_center, self.center) < HITBOX_TOLERANCE:
             self.angular_vel = 0
         else:
             self.angular_vel = self.velocity.dot(i_par) / (PLAYER_RADIUS / PIXELS_PER_METER)
@@ -114,7 +126,7 @@ class Player(pygame.sprite.Sprite):
 
         # ray-cast from prev position and find intersection
         tolerance = self.velocity.normalize() * HITBOX_TOLERANCE
-        ray_cast = LineString([(self.prev_pos_center.x - tolerance.x, self.prev_pos_center.y - tolerance.y), self.pos_center])
+        ray_cast = LineString([(self.prev_pos_center.x - tolerance.x, self.prev_pos_center.y - tolerance.y), self.center])
 
         min_dist = float('inf')
         min_dot_prod = float('inf')
@@ -141,24 +153,20 @@ class Player(pygame.sprite.Sprite):
                             coords.append((coord.x, coord.y))
 
                 for coord in coords:
-                    distance = dist(coord, self.prev_pos_center)
+                    distance = get_dist(coord, self.prev_pos_center)
+                    i_norm = self._get_i_norm(hitbox, coord)
+                    dot_prod = i_norm.dot(self.velocity)
 
-                    if distance < min_dist:
+                    # ignore if the normal vector does not oppose velocity
+                    if i_norm.dot(self.velocity) > 0:
+                        continue
+
+                    if distance < min_dist or (distance == min_dist and dot_prod < min_dot_prod):
                         min_dist = distance
                         min_i_norm = self._get_i_norm(hitbox, coord)
                         min_dot_prod = min_i_norm.dot(self.velocity)
                         min_coord = coord
                         min_tile = tile
-
-                    elif distance == min_dist:
-                        i_norm = self._get_i_norm(hitbox, coord)
-                        dot_prod = min_i_norm.dot(self.velocity)
-
-                        if dot_prod < min_dot_prod:
-                            min_dot_prod = dot_prod
-                            min_i_norm = i_norm
-                            min_coord = coord
-                            min_tile = tile
 
         return min_coord, min_i_norm, min_tile
 
@@ -166,8 +174,8 @@ class Player(pygame.sprite.Sprite):
         """Get sprites in a 3 x 3 square"""
 
         sprite_list = []
-        current_tile_x = TILE_WIDTH * floor(self.pos_center.x / TILE_WIDTH)
-        current_tile_y = TILE_WIDTH * floor(self.pos_center.y / TILE_WIDTH)
+        current_tile_x = TILE_WIDTH * floor(self.center.x / TILE_WIDTH)
+        current_tile_y = TILE_WIDTH * floor(self.center.y / TILE_WIDTH)
 
         for sprite in self.collision_sprites:
             if max(abs(current_tile_x - sprite.pos[0]), abs(current_tile_y - sprite.pos[1])) <= TILE_WIDTH:
@@ -191,15 +199,15 @@ class Player(pygame.sprite.Sprite):
             if pos_change is not None:
                 raise TypeError
 
-            self.pos_center.update(coord)
+            self.center.update(coord)
         elif pos_change is not None:
-            self.pos_center += pos_change
+            self.center += pos_change
 
-        self.rect.center = self.pos_center
+        self.rect.center = self.center
         self.hitbox.update_pos()
 
     def update(self):
-        self.prev_pos_center.update(self.pos_center)
+        self.prev_pos_center.update(self.center)
 
         # rotate
         self.rotation += self.angular_vel
@@ -211,11 +219,11 @@ class Player(pygame.sprite.Sprite):
         # prune sprites that are not close in proximity
         sprite_list = self._get_nearby_sprites()
 
-        # accelerate due to gravity
-        self.velocity.y += GRAVITY / FPS
-
         # check for collisions
         collided_sprites = self._get_collisions(sprite_list, self.hitbox)
+
+        # accelerate due to gravity
+        self.velocity.y += GRAVITY / FPS
 
         # collision logic
         if self.velocity.magnitude() != 0:
