@@ -1,5 +1,5 @@
 import pygame
-from player import Player
+from player import Player, PlayerSpriteGroup
 from tile import Tile, TileType, TileMaterial
 from settings import TILE_WIDTH
 from hitbox import HitboxSpriteGroup
@@ -25,7 +25,7 @@ class Level:
         self.screen = screen
         self.collision_sprites = pygame.sprite.Group()
         self.sprite_group = HitboxSpriteGroup()
-        self.player_group = pygame.sprite.Group()
+        self.player_group = PlayerSpriteGroup()
 
         # spawn tiles
         for y, column in enumerate(LEVEL):

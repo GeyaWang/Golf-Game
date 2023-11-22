@@ -29,7 +29,6 @@ class CircleHitbox:
         self.hitbox = Point(self.pos).buffer(self.radius).boundary
 
     def draw(self):
-        self.update_pos()
         pygame.draw.circle(self.screen, (255, 0, 0), self.rect.topleft, self.radius, 1)
 
 

@@ -23,6 +23,10 @@ class Game:
                     pygame.quit()
                     sys_exit()
 
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    pos = pygame.mouse.get_pos()
+                    print(pos)
+
             # update player
             self.level.player_group.update()
 
