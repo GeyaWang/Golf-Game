@@ -28,7 +28,6 @@ class Tile(pygame.sprite.Sprite):
         super().__init__()
 
         self.pos = pos
-        self.center = (pos[0] + TILE_WIDTH / 2, pos[1] + TILE_WIDTH / 2)
         self.material = material.value
 
         self.image = pygame.Surface([TILE_WIDTH, TILE_WIDTH])

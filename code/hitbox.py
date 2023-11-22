@@ -12,8 +12,8 @@ class HitboxSpriteGroup(pygame.sprite.Group):
         super().draw(surface)
         if DRAW_HITBOXES:
             for sprite in self.sprites():
-                sprite.hitbox.draw()
-                sprite.c_hitbox.draw()
+                sprite.hitbox.draw('red')
+                sprite.c_hitbox.draw('green')
 
 
 class CircleHitbox:
@@ -28,8 +28,8 @@ class CircleHitbox:
         self.rect.x, self.rect.y = self.pos[0], self.pos[1]
         self.hitbox = Point(self.pos).buffer(self.radius).boundary
 
-    def draw(self):
-        pygame.draw.circle(self.screen, (255, 0, 0), self.rect.topleft, self.radius, 1)
+    def draw(self, colour):
+        pygame.draw.circle(self.screen, colour, self.rect.topleft, self.radius, 1)
 
 
 class LineHitbox:
@@ -38,11 +38,11 @@ class LineHitbox:
         self.pos_list = pos_list
         self.hitbox = LineString(pos_list)
 
-    def draw(self):
+    def draw(self, colour):
         prev_pos = None
         for pos in self.pos_list:
             if prev_pos is not None:
-                pygame.draw.line(self.screen, (0, 255, 0), prev_pos, pos, 1)
+                pygame.draw.line(self.screen, colour, prev_pos, pos, 1)
             prev_pos = pos
 
 
@@ -51,8 +51,8 @@ class Hitbox:
     line: LineHitbox = None
     circles: list = None
 
-    def draw(self):
+    def draw(self, colour):
         if self.circles is not None:
-            [x.draw() for x in self.circles]
+            [x.draw(colour) for x in self.circles]
         if self.line is not None:
-            self.line.draw()
+            self.line.draw(colour)
