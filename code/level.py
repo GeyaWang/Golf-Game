@@ -1,8 +1,8 @@
 import pygame
-from player import Player, PlayerSpriteGroup
+from player import Player
 from tile import Tile, TileType, TileMaterial
 from settings import TILE_WIDTH
-from hitbox import HitboxSpriteGroup
+from camera import CameraSpriteGroup
 
 
 LEVEL = [
@@ -22,10 +22,10 @@ LEVEL = [
 class Level:
     def __init__(self, screen):
         # sprite setup
-        self.screen = screen
-        self.collision_sprites = pygame.sprite.Group()
-        self.sprite_group = HitboxSpriteGroup()
-        self.player_group = PlayerSpriteGroup()
+        self._screen = screen
+        self._collision_sprites = pygame.sprite.Group()
+        self.player = Player(self._collision_sprites)
+        self._visible_sprites = CameraSpriteGroup(self.player)
 
         # spawn tiles
         for y, column in enumerate(LEVEL):
@@ -40,13 +40,13 @@ class Level:
                         tile = Tile(pos, TileType.SLOPE1, TileMaterial.GENERIC)
                     elif tile_type == 4:
                         tile = Tile(pos, TileType.SLOPE2, TileMaterial.GENERIC)
-                    self.collision_sprites.add(tile)
-                    self.sprite_group.add(tile)
+                    self._collision_sprites.add(tile)
+                    self._visible_sprites.add(tile)
 
         # spawn player
-        player = Player((400, 150), self.collision_sprites)
-        self.player_group.add(player)
+        self.player.update_pos(coord=(150, 100))
+        self._visible_sprites.add(self.player)
 
     def draw_sprites(self):
-        self.sprite_group.draw(self.screen)
-        self.player_group.draw(self.screen)
+        self._visible_sprites.update()
+        self._visible_sprites.draw(self._screen)

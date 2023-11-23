@@ -1,8 +1,11 @@
 import pygame
 from settings import TILE_WIDTH, PLAYER_RADIUS
 from hitbox import Hitbox, LineHitbox, CircleHitbox
-from enum import Enum, auto
-from dataclasses import dataclass
+from enum import Enum
+from collections import namedtuple
+
+
+Material = namedtuple('Material', 'coef_restitution friction')
 
 
 class TileType:
@@ -11,12 +14,6 @@ class TileType:
     SLOPE1 = ((0, 0), (1, 1), (0, 1), (0, 0))
     SLOPE2 = ((0, 0), (1, 0), (0, 1), (0, 0))
     SLOPE3 = ((0, 0), (1, 0), (1, 1), (0, 0))
-
-
-@dataclass
-class Material:
-    coef_restitution: float
-    friction: float
 
 
 class TileMaterial(Enum):

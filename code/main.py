@@ -9,13 +9,14 @@ class Game:
         # pygame setup
         pygame.init()
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT), vsync=1)
-        self.clock = pygame.time.Clock()
+        self._clock = pygame.time.Clock()
         pygame.display.set_caption('Golf Game')
 
-        self.level = Level(self.screen)
+        self._level = Level(self.screen)
 
     def _run(self):
-        # event loop
+        """Game Loop"""
+
         while True:
             event_list = pygame.event.get()
             for event in event_list:
@@ -25,17 +26,17 @@ class Game:
 
                 elif event.type == pygame.MOUSEBUTTONUP:
                     pos = pygame.mouse.get_pos()
-                    self.level.player_group.shoot(pos)
+                    self._level.player.shoot(pos)
 
-            # update player
-            self.level.player_group.update()
+            # update
+            self._level.player.update()
 
             # draw
             self.screen.fill('black')
-            self.level.draw_sprites()
+            self._level.draw_sprites()
             pygame.display.flip()
 
-            self.clock.tick(FPS)
+            self._clock.tick(FPS)
 
     def start(self):
         self._run()

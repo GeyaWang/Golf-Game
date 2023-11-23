@@ -1,48 +1,35 @@
 import pygame
-from settings import DRAW_HITBOXES
 from shapely.geometry import Point, LineString
 from dataclasses import dataclass
-
-
-class HitboxSpriteGroup(pygame.sprite.Group):
-    def __init__(self):
-        super().__init__()
-
-    def draw(self, surface, bgsurf=None, special_flags=0):
-        super().draw(surface)
-        if DRAW_HITBOXES:
-            for sprite in self.sprites():
-                sprite.hitbox.draw('red')
-                sprite.c_hitbox.draw('green')
 
 
 class CircleHitbox:
     def __init__(self, r, pos: tuple | pygame.Vector2):
         self.screen = pygame.display.get_surface()
-        self.radius = r
+        self._radius = r
         self.pos = pos
-        self.rect = pygame.Rect(self.pos[0], self.pos[1], self.radius, self.radius)
-        self.hitbox = Point(self.pos).buffer(self.radius).boundary
+        self._rect = pygame.Rect(self.pos[0], self.pos[1], self._radius, self._radius)
+        self.hitbox = Point(self.pos).buffer(self._radius).boundary
 
     def update_pos(self):
-        self.rect.x, self.rect.y = self.pos[0], self.pos[1]
-        self.hitbox = Point(self.pos).buffer(self.radius).boundary
+        self._rect.x, self._rect.y = self.pos[0], self.pos[1]
+        self.hitbox = Point(self.pos).buffer(self._radius).boundary
 
-    def draw(self, colour):
-        pygame.draw.circle(self.screen, colour, self.rect.topleft, self.radius, 1)
+    def draw(self, colour, offset: pygame.Vector2):
+        pygame.draw.circle(self.screen, colour, self._rect.topleft + offset, self._radius, 1)
 
 
 class LineHitbox:
     def __init__(self, pos_list):
-        self.screen = pygame.display.get_surface()
+        self._screen = pygame.display.get_surface()
         self.pos_list = pos_list
         self.hitbox = LineString(pos_list)
 
-    def draw(self, colour):
+    def draw(self, colour, offset: pygame.Vector2):
         prev_pos = None
         for pos in self.pos_list:
             if prev_pos is not None:
-                pygame.draw.line(self.screen, colour, prev_pos, pos, 1)
+                pygame.draw.line(self._screen, colour, offset + prev_pos, offset + pos, 1)
             prev_pos = pos
 
 
@@ -51,8 +38,8 @@ class Hitbox:
     line: LineHitbox = None
     circles: list = None
 
-    def draw(self, colour):
+    def draw(self, colour, offset: pygame.Vector2):
         if self.circles is not None:
-            [x.draw(colour) for x in self.circles]
+            [x.draw(colour, offset) for x in self.circles]
         if self.line is not None:
-            self.line.draw(colour)
+            self.line.draw(colour, offset)
