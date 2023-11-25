@@ -1,11 +1,11 @@
 import pygame
-from settings import DRAW_HITBOXES, CAMERA_SPEED
+from settings import DRAW_HITBOXES, CAMERA_SPEED, PLAYER_RADIUS
 from player import Player
 from tile import Tile
 
 
 class CameraSpriteGroup(pygame.sprite.Group):
-    def __init__(self, player):
+    def __init__(self, player: Player):
         super().__init__()
 
         self._screen = pygame.display.get_surface()
@@ -15,16 +15,31 @@ class CameraSpriteGroup(pygame.sprite.Group):
         self._offset = pygame.Vector2()
 
     def draw(self, surface, bgsurf=None, special_flags=0):
+        for sprite in self.sprites():
+            self._screen.blit(sprite.image, self._offset + sprite.rect.topleft)
+
         if DRAW_HITBOXES:
             for sprite in self.sprites():
                 if isinstance(sprite, Player):
                     sprite.hitbox.draw('blue', self._offset)
+                    pygame.draw.circle(self._screen, 'blue', self._player.prev_pos_center + self._offset, PLAYER_RADIUS, 1)
+                    if self._player.center != self._player.prev_pos_center:
+                        offset = pygame.Vector2(self._player.center.y - self._player.prev_pos_center.y, self._player.prev_pos_center.x - self._player.center.x).normalize() * PLAYER_RADIUS
+                        pygame.draw.polygon(
+                            self._screen,
+                            'blue',
+                            (
+                                self._player.center + offset + self._offset,
+                                self._player.prev_pos_center + offset + self._offset,
+                                self._player.prev_pos_center - offset + self._offset,
+                                self._player.center - offset + self._offset,
+                                self._player.center + offset + self._offset
+                            ),
+                            1
+                        )
                 elif isinstance(sprite, Tile):
                     sprite.hitbox.draw('red', self._offset)
                     sprite.c_hitbox.draw('lime', self._offset)
-        else:
-            for sprite in self.sprites():
-                self._screen.blit(sprite.image, self._offset + sprite.rect.topleft)
 
     def update(self):
         if self._player.is_on_ground and self._player.is_stationary():

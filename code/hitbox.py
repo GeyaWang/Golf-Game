@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 class CircleHitbox:
     def __init__(self, r, pos: tuple | pygame.Vector2):
-        self.screen = pygame.display.get_surface()
+        self._screen = pygame.display.get_surface()
         self._radius = r
         self.pos = pos
         self._rect = pygame.Rect(self.pos[0], self.pos[1], self._radius, self._radius)
@@ -16,7 +16,7 @@ class CircleHitbox:
         self.hitbox = Point(self.pos).buffer(self._radius).boundary
 
     def draw(self, colour, offset: pygame.Vector2):
-        pygame.draw.circle(self.screen, colour, self._rect.topleft + offset, self._radius, 1)
+        pygame.draw.circle(self._screen, colour, self._rect.topleft + offset, self._radius, 1)
 
 
 class LineHitbox:

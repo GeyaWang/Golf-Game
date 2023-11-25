@@ -3,7 +3,7 @@ import shapely
 from tile import Tile
 from settings import GRAVITY, FPS, PIXELS_PER_METER, PLAYER_RADIUS, HITBOX_TOLERANCE, TILE_WIDTH, DRAG_CONSTANT, PLAYER_MASS, SHOOT_STRENGTH_COEFFICIENT, VELOCITY_TOLERANCE
 from hitbox import CircleHitbox
-from shapely.geometry import LineString
+from shapely.geometry import LineString, GeometryCollection, Polygon, Point
 from math import dist as get_dist, floor, sqrt
 
 
@@ -24,7 +24,7 @@ class Player(pygame.sprite.Sprite):
         self._rotation = 0
         self._angular_vel = 0
         self.center = pygame.Vector2(self.rect.center)
-        self._prev_pos_center = pygame.Vector2()
+        self.prev_pos_center = pygame.Vector2()
         self.hitbox = CircleHitbox(PLAYER_RADIUS, self.center)
 
     def shoot(self, pos):
@@ -39,20 +39,43 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.surface.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA, 32).convert_alpha()
         self.image.blit(new_image, ((self.rect.width - new_rect.width) / 2, (self.rect.height - new_rect.height) / 2))
 
-    @staticmethod
-    def _get_collisions(sprites: list[Tile], hitbox) -> list[Tile]:
+    def _get_collisions(self, sprites: list[Tile]) -> list[Tile]:
         """Iterate through sprites to find instances of collisions"""
+
+        # get travel hitbox
+        hitbox_list = [
+            Point(self.center).buffer(PLAYER_RADIUS).boundary,
+            Point(self.prev_pos_center).buffer(PLAYER_RADIUS).boundary
+        ]
+
+        if self.center != self.prev_pos_center:
+            offset = pygame.Vector2(self.center.y - self.prev_pos_center.y, self.prev_pos_center.x - self.center.x).normalize() * PLAYER_RADIUS
+
+            hitbox_list.append(
+                Polygon(
+                    (
+                        self.center + offset,
+                        self.prev_pos_center + offset,
+                        self.prev_pos_center - offset,
+                        self.center - offset,
+                        self.center + offset
+                    )
+                ),
+            )
+
+        travel_hitbox = GeometryCollection(hitbox_list)
 
         collided_sprites = []
 
         for sprite in sprites:
-            if shapely.intersects(hitbox.hitbox, sprite.hitbox.line.hitbox):
+            if shapely.intersects(travel_hitbox, sprite.hitbox.line.hitbox):
                 collided_sprites.append(sprite)
 
             if sprite.hitbox.circles is not None:
                 for circle in sprite.hitbox.circles:
-                    if shapely.intersects(hitbox.hitbox, circle.hitbox):
+                    if shapely.intersects(travel_hitbox, circle.hitbox):
                         collided_sprites.append(sprite)
+
         return collided_sprites
 
     def _set_angular_vel(self, i_par: pygame.Vector2):
@@ -111,7 +134,7 @@ class Player(pygame.sprite.Sprite):
 
         # ray-cast from prev position and find intersection
         tolerance = self._velocity.normalize() * HITBOX_TOLERANCE
-        ray_cast = LineString([(self._prev_pos_center.x - tolerance.x, self._prev_pos_center.y - tolerance.y), self.center])
+        ray_cast = LineString([(self.prev_pos_center.x - tolerance.x, self.prev_pos_center.y - tolerance.y), self.center])
 
         min_dist = float('inf')
         min_dot_prod = float('inf')
@@ -138,7 +161,7 @@ class Player(pygame.sprite.Sprite):
                             coords.append((coord.x, coord.y))
 
                 for coord in coords:
-                    distance = get_dist(coord, self._prev_pos_center)
+                    distance = get_dist(coord, self.prev_pos_center)
                     i_norm = self._get_i_norm(hitbox, coord)
                     dot_prod = i_norm.dot(self._velocity)
 
@@ -176,7 +199,7 @@ class Player(pygame.sprite.Sprite):
         self._velocity += drag_acceleration / FPS
 
     def is_stationary(self) -> bool:
-        return get_dist(self._prev_pos_center, self.center) < HITBOX_TOLERANCE and self._velocity.magnitude() < VELOCITY_TOLERANCE
+        return get_dist(self.prev_pos_center, self.center) < HITBOX_TOLERANCE and self._velocity.magnitude() < VELOCITY_TOLERANCE
 
     def update_pos(self, *, coord=None, pos_change: pygame.Vector2 = None):
         """Update position using coord or change in position"""
@@ -214,19 +237,19 @@ class Player(pygame.sprite.Sprite):
     def update(self):
         super().update()
 
-        self._prev_pos_center.update(self.center)
+        self.prev_pos_center.update(self.center)
 
         # update position
         self.update_pos(pos_change=self._velocity * PIXELS_PER_METER / FPS)
+
+        # accelerate due to gravity
+        self._velocity.y += GRAVITY / FPS
 
         # prune sprites that are not close in proximity
         sprite_list = self._get_nearby_sprites()
 
         # check for collisions
-        collided_sprites = self._get_collisions(sprite_list, self.hitbox)
-
-        # accelerate due to gravity
-        self._velocity.y += GRAVITY / FPS
+        collided_sprites = self._get_collisions(sprite_list)
 
         # rotate
         self._rotation += self._angular_vel
@@ -242,6 +265,8 @@ class Player(pygame.sprite.Sprite):
                 self.update_pos(coord=coord)
 
                 self._bounce(i_norm, tile)
+        else:
+            print('no vel')
 
         # calculate and apply drag force
         self._apply_drag()
