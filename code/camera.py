@@ -27,7 +27,7 @@ class CameraSpriteGroup(pygame.sprite.Group):
                 self._screen.blit(sprite.image, self._offset + sprite.rect.topleft)
 
     def update(self):
-        if self._player.is_stationary():
+        if self._player.is_on_ground and self._player.is_stationary():
             self._target_offset = self._screen_center - self._player.center
 
         self._offset += (self._target_offset - self._offset) * CAMERA_SPEED

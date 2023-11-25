@@ -19,6 +19,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=pos)
         self.camera_offset = pygame.Vector2()
 
+        self.is_on_ground = False
         self._velocity = pygame.Vector2()
         self._rotation = 0
         self._angular_vel = 0
@@ -193,6 +194,23 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = self.center
         self.hitbox.update_pos()
 
+    def check_is_on_ground(self, sprites) -> bool:
+        ray_cast = LineString([(self.center.x, self.center.y + PLAYER_RADIUS + HITBOX_TOLERANCE), self.center])
+
+        for sprite in sprites:
+            hitbox = sprite.hitbox
+
+            if ray_cast.intersects(hitbox.line.hitbox):
+                return True
+
+            if hitbox.circles is None:
+                continue
+
+            for circle in hitbox.circles:
+                if ray_cast.intersects(circle.hitbox):
+                    return True
+        return False
+
     def update(self):
         super().update()
 
@@ -227,3 +245,6 @@ class Player(pygame.sprite.Sprite):
 
         # calculate and apply drag force
         self._apply_drag()
+
+        # check if grounded
+        self.is_on_ground = self.check_is_on_ground(sprite_list)
