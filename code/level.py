@@ -44,7 +44,7 @@ class Level:
                     self._visible_sprites.add(tile)
 
         # spawn player
-        self.player.update_pos(coord=(150, 100))
+        self.player.update_pos(coord=(150.8, 100))
         self._visible_sprites.add(self.player)
 
     def draw_sprites(self):

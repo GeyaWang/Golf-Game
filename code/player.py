@@ -14,15 +14,16 @@ class Player(pygame.sprite.Sprite):
         self._collision_sprites = collision_sprites
 
         self._screen = pygame.display.get_surface()
-        self._sprite = pygame.image.load('C:/Users/User/Desktop/Python/GolfGame/graphics/player/ball.png')
+        self._sprite = pygame.image.load('../graphics/player/ball.png')
         self.image = self._sprite.copy()
         self.rect = self.image.get_rect(center=pos)
         self.camera_offset = pygame.Vector2()
 
-        self.is_on_ground = False
         self._velocity = pygame.Vector2()
         self._rotation = 0
         self._angular_vel = 0
+
+        self.is_on_ground = False
         self.center = pygame.Vector2(self.rect.center)
         self.prev_pos_center = pygame.Vector2()
         self.hitbox = CircleHitbox(PLAYER_RADIUS, self.center)
@@ -81,7 +82,7 @@ class Player(pygame.sprite.Sprite):
     def _set_angular_vel(self, i_par: pygame.Vector2):
         """Set angular velocity, ignore if the change in position is negligible"""
 
-        if self.is_stationary():
+        if self.is_stationary() or self._is_negligible_vel():
             self._angular_vel = 0
         else:
             self._angular_vel = self._velocity.dot(i_par) / (PLAYER_RADIUS / PIXELS_PER_METER)
@@ -91,7 +92,8 @@ class Player(pygame.sprite.Sprite):
 
         i_par = pygame.Vector2(i_norm.y, -i_norm.x)
         vel_norm = self._velocity.dot(i_norm) * -1 * tile.material.coef_restitution
-        vel_par = self._velocity.dot(i_par) * tile.material.friction
+        friction = 1 - (1 - tile.material.friction) / FPS * 60
+        vel_par = self._velocity.dot(i_par) * friction
 
         # ignore velocity component to the normal if negligible
         if abs(vel_norm) < 0.2:
@@ -199,7 +201,7 @@ class Player(pygame.sprite.Sprite):
         self._velocity += drag_acceleration / FPS
 
     def is_stationary(self) -> bool:
-        return get_dist(self.prev_pos_center, self.center) < HITBOX_TOLERANCE and self._velocity.magnitude() < VELOCITY_TOLERANCE
+        return get_dist(self.prev_pos_center, self.center) < HITBOX_TOLERANCE and self._is_negligible_vel()
 
     def update_pos(self, *, coord=None, pos_change: pygame.Vector2 = None):
         """Update position using coord or change in position"""
@@ -234,6 +236,9 @@ class Player(pygame.sprite.Sprite):
                     return True
         return False
 
+    def _is_negligible_vel(self) -> bool:
+        return self._velocity.magnitude() < VELOCITY_TOLERANCE
+
     def update(self):
         super().update()
 
@@ -246,30 +251,30 @@ class Player(pygame.sprite.Sprite):
         self._velocity.y += GRAVITY / FPS
 
         # prune sprites that are not close in proximity
-        sprite_list = self._get_nearby_sprites()
+        near_sprite_list = self._get_nearby_sprites()
 
         # check for collisions
-        collided_sprites = self._get_collisions(sprite_list)
+        collided_sprites = self._get_collisions(near_sprite_list)
 
         # rotate
-        self._rotation += self._angular_vel
+        self._rotation += self._angular_vel / FPS * 60
         self._rotate_sprite(self._rotation)
 
         # collision logic
-        if self._velocity.magnitude() != 0:
-            coord, i_norm, tile = self._get_intersections(collided_sprites)
+        coord, i_norm, tile = self._get_intersections(collided_sprites)
 
-            # ignore if no collisions of perfectly grazing surface
-            if coord is not None and i_norm.dot(self._velocity) != 0:
-                # go to position
-                self.update_pos(coord=coord)
+        # ignore if no collisions of perfectly grazing surface
+        if coord is not None and i_norm.dot(self._velocity) != 0:
+            # go to position
+            self.update_pos(coord=coord)
 
+            if self._is_negligible_vel() and self.is_on_ground:
+                self._velocity.update(0, 0)
+            else:
                 self._bounce(i_norm, tile)
-        else:
-            print('no vel')
 
         # calculate and apply drag force
         self._apply_drag()
 
         # check if grounded
-        self.is_on_ground = self.check_is_on_ground(sprite_list)
+        self.is_on_ground = self.check_is_on_ground(near_sprite_list)

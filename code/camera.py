@@ -1,5 +1,5 @@
 import pygame
-from settings import DRAW_HITBOXES, CAMERA_SPEED, PLAYER_RADIUS
+from settings import DRAW_HITBOXES, CAMERA_SPEED, PLAYER_RADIUS, FPS
 from player import Player
 from tile import Tile
 
@@ -20,6 +20,7 @@ class CameraSpriteGroup(pygame.sprite.Group):
 
         if DRAW_HITBOXES:
             for sprite in self.sprites():
+
                 if isinstance(sprite, Player):
                     sprite.hitbox.draw('blue', self._offset)
                     pygame.draw.circle(self._screen, 'blue', self._player.prev_pos_center + self._offset, PLAYER_RADIUS, 1)
@@ -42,8 +43,8 @@ class CameraSpriteGroup(pygame.sprite.Group):
                     sprite.c_hitbox.draw('lime', self._offset)
 
     def update(self):
-        if self._player.is_on_ground and self._player.is_stationary():
+        if self._player.is_stationary() and self._player.is_on_ground and self._player.is_stationary():
             self._target_offset = self._screen_center - self._player.center
 
-        self._offset += (self._target_offset - self._offset) * CAMERA_SPEED
+        self._offset += (self._target_offset - self._offset) * CAMERA_SPEED / FPS
         self._player.camera_offset.update(self._offset)

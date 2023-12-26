@@ -17,7 +17,7 @@ class TileType:
 
 
 class TileMaterial(Enum):
-    GENERIC = Material(0.3, 0.95)
+    GENERIC = Material(0.3, 0.98)
 
 
 class Tile(pygame.sprite.Sprite):
